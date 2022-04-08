@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:controll_car/main.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,15 +8,11 @@ import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
 class BluetoothApp extends StatefulWidget {
   //message we get from the mic to send it to the device
-  final String message;
-  BluetoothApp({this.message});
   @override
   _BluetoothAppState createState() => _BluetoothAppState();
 }
 
 class _BluetoothAppState extends State<BluetoothApp> {
-  List<int> list ;
-  Uint8List command ;
   // Initializing the Bluetooth connection state to be unknown
   BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
   // Initializing a global key, as it would help us in showing a SnackBar later
@@ -50,8 +47,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
   @override
   void initState() {
     super.initState();
-    list=widget.message.codeUnits;
-    command= Uint8List.fromList(list);
     // Get current state
     FlutterBluetoothSerial.instance.state.then((state) {
       setState(() {
@@ -139,7 +134,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
       home: Scaffold(
         key: _scaffoldKey,
         appBar: AppBar(
-          title: Text("By: Nour Mohammed"),
+          title: Text("Control Car"),
           backgroundColor: Colors.purple,
           actions: <Widget>[
             FlatButton.icon(
@@ -273,69 +268,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           ),
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            side: new BorderSide(
-                              color: _deviceState == 0
-                                  ? colors['neutralBorderColor']
-                                  : _deviceState == 1
-                                  ? colors['onBorderColor']
-                                  : colors['offBorderColor'],
-                              width: 3,
-                            ),
-                            borderRadius: BorderRadius.circular(4.0),
-                          ),
-                          elevation: _deviceState == 0 ? 4 : 0,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Directionality(
-                              textDirection: TextDirection.rtl,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: <Widget>[
-
-                                  Text(
-                                    " الأمر :",
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        color: Colors.purple,
-                                        fontWeight: FontWeight.bold
-                                    ),
-                                  ),
-
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  Text(
-                                    widget.message,
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold
-                                    ),
-                                  ),
-
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      RaisedButton(
-                        color: Colors.purple,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)
-                        ),
-                        onPressed: !_connected? null
-                            : _sendMessageToBluetooth,
-                        child:
-                        Text("ارسال",
-                          style: TextStyle(color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold),),
-                      ),
                     ],
                   ),
                   Container(
@@ -418,6 +350,11 @@ class _BluetoothAppState extends State<BluetoothApp> {
       if (!isConnected) {
         await BluetoothConnection.toAddress(_device.address)
             .then((_connection) {
+          setState(() {
+            _connected = true;
+          });
+          show('تم الاقتران');
+          Navigator.push(context, MaterialPageRoute(builder: (ctx)=>MyHomePage(sendMessage: sendMessageToBluetooth,)));
           print('Connected to the device');
           connection = _connection;
           connection.input.listen((Uint8List data) {
@@ -427,13 +364,10 @@ class _BluetoothAppState extends State<BluetoothApp> {
             }
           });
         }).catchError((error) {
+          show(error);
           print('Cannot connect, exception occurred');
           print(error);
         });
-        setState(() {
-          _connected = true;
-        });
-        show('تم الاقتران');
 
         setState(() => _isButtonUnavailable = false);
       }
@@ -459,7 +393,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
   // Method to send message,
   // to the device
-  void _sendMessageToBluetooth() async {
+  Future sendMessageToBluetooth(Uint8List command) async {
+    print("sending message");
     connection.output.add(command);
     await connection.output.allSent;
     show('تم ارسال الامر');

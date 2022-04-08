@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:controll_car/blutooth_state.dart';
 import 'package:flutter/material.dart';
 import 'package:avatar_glow/avatar_glow.dart';
@@ -11,16 +12,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.purple,
       ),
-      home: MyHomePage(),
+      home: BluetoothApp(),
     );
   }
 }
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key}) : super(key: key);
-
+ Future Function(Uint8List value) sendMessage;
+ MyHomePage({this.sendMessage});
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -29,6 +31,8 @@ class _MyHomePageState extends State<MyHomePage> {
   SpeechToText _speechToText = SpeechToText();
   bool _speechEnabled = false;
   String _lastWords = '';
+  List<int> list;
+  Uint8List command;
 
   @override
   void initState() {
@@ -70,14 +74,14 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.purple,
-        title: Text('By: Nour Mohammed'),
+        title: Text('Control Car'),
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
             SizedBox(
-              height: 100,
+              height: 50,
             ),
             Expanded(
               child: Container(
@@ -102,39 +106,32 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
             ),
-            RaisedButton(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)
+
+            AvatarGlow(
+              animate:_speechToText.isNotListening ? false:true ,
+              glowColor: Colors.purple,
+              endRadius: 60,
+              child: FloatingActionButton(
+                backgroundColor: Colors.purple,
+                onPressed:
+                // If not yet listening for speech start, otherwise stop
+                _speechToText.isNotListening ? _startListening : _stopListening,
+                tooltip: 'تكلم',
+                child: Icon(_speechToText.isNotListening ? Icons.mic_none : Icons.mic,),
               ),
-              color: Colors.purple,
-              child: Text("اتصال",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18
-              ),),
-                onPressed:_lastWords.isNotEmpty&&_speechToText.isNotListening?(){
-                  Navigator.push(context, MaterialPageRoute(builder: (ctx)=>BluetoothApp(
-                    message: _lastWords,
-                  )));
-                }:null),
+            ),
+            _lastWords!=""&&_speechToText.isNotListening?FloatingActionButton(
+              backgroundColor: Colors.purple,
+              onPressed:()async{
+                await widget.sendMessage(Uint8List.fromList(_lastWords.codeUnits));
+              },
+              tooltip: 'ارسال',
+              child: Icon(Icons.send_sharp),
+            ):Container(),
             SizedBox(
-              height: 150,
+              height: 50,
             ),
           ],
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: AvatarGlow(
-        animate:_speechToText.isNotListening ? false:true ,
-        glowColor: Colors.purple,
-        endRadius: 60,
-        child: FloatingActionButton(
-          backgroundColor: Colors.purple,
-          onPressed:
-          // If not yet listening for speech start, otherwise stop
-          _speechToText.isNotListening ? _startListening : _stopListening,
-          tooltip: 'تكلم',
-          child: Icon(_speechToText.isNotListening ? Icons.mic_none : Icons.mic,),
         ),
       ),
     );
